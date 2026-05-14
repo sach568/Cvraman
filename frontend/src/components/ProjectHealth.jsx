@@ -1,27 +1,22 @@
 export default function ProjectHealth({ projects }) {
-  const healthCount = { green: 0, yellow: 0, red: 0 };
+  const health = { green: 0, yellow: 0, red: 0 };
   projects.forEach((p) => {
-    healthCount[p.health] = (healthCount[p.health] || 0) + 1;
+    if (p.health) health[p.health]++;
+    else health.green++;
   });
-
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="space-y-2">
+      <div className="flex justify-between">
         <span>🟢 On Track</span>
-        <span className="font-bold">{healthCount.green || 0}</span>
+        <span className="font-bold">{health.green}</span>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between">
         <span>🟡 Risk</span>
-        <span className="font-bold">{healthCount.yellow || 0}</span>
+        <span className="font-bold">{health.yellow}</span>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between">
         <span>🔴 Delayed</span>
-        <span className="font-bold">{healthCount.red || 0}</span>
-      </div>
-      <div className="mt-4 pt-3 border-t">
-        <p className="text-sm text-gray-500">
-          Based on overdue tasks, workload, and progress %
-        </p>
+        <span className="font-bold">{health.red}</span>
       </div>
     </div>
   );

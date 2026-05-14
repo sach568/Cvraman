@@ -1,5 +1,5 @@
 <?php
-require_once '../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 requireLogin();
 
 $user_id = $_SESSION['user_id'];
@@ -13,8 +13,8 @@ if ($role === 'student') {
   sendJSON(['totalProjects' => $total, 'tasksCompleted' => $completed, 'pendingTasks' => $pending, 'overdueTasks' => $overdue]);
 } elseif ($role === 'mentor') {
   $total = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM projects WHERE mentor_id=$user_id"))['count'];
-  $pendingReviews = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM projects WHERE mentor_id=$user_id AND status='submitted'"))['count'];
-  sendJSON(['totalProjects' => $total, 'pendingReviews' => $pendingReviews]);
+  $pending = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM projects WHERE mentor_id=$user_id AND status='submitted'"))['count'];
+  sendJSON(['totalProjects' => $total, 'pendingReviews' => $pending]);
 } else {
   $projects = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM projects"))['count'];
   $students = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM users WHERE role='student'"))['count'];

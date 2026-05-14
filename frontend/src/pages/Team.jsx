@@ -1,387 +1,303 @@
-import { useEffect, useState } from "react";
-import api from "../api";
-import toast from "react-hot-toast";
+import React, { useEffect, useState } from "react";
+import { getUsers } from "../api";
 
 export default function Team() {
-  const [mentors, setMentors] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [editingUser, setEditingUser] = useState(null);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    email: "",
-    roll_number: "",
-    branch: "",
-  });
-  const userRole = JSON.parse(localStorage.getItem("user") || "{}").role;
+  const [users, setUsers] = useState({ students: [], mentors: [] });
+  const [search, setSearch] = useState("");
+  const [filterRole, setFilterRole] = useState("all"); // all, student, mentor
 
   useEffect(() => {
-    fetchUsers();
+    getUsers().then((res) => setUsers(res.data));
   }, []);
 
-  const fetchUsers = async () => {
-    try {
-      const res = await api.get("/users.php");
-      setMentors(res.data.mentors);
-      setStudents(res.data.students);
-    } catch (err) {
-      toast.error("Failed to load users");
-    } finally {
-      setLoading(false);
-    }
+  // Filter users based on search term and role
+  const filterUsers = (list, role) => {
+    if (filterRole !== "all" && filterRole !== role) return [];
+    if (!search.trim()) return list;
+    return list.filter(
+      (user) =>
+        user.name.toLowerCase().includes(search.toLowerCase()) ||
+        user.email?.toLowerCase().includes(search.toLowerCase()) ||
+        user.roll_number?.toLowerCase().includes(search.toLowerCase()),
+    );
   };
 
-  const handleDelete = async (id, type) => {
-    if (!window.confirm(`Delete this ${type}?`)) return;
-    try {
-      await api.delete(`/users.php?id=${id}`);
-      toast.success(`${type} deleted`);
-      fetchUsers();
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Delete failed");
-    }
-  };
+  const filteredStudents = filterUsers(users.students, "student");
+  const filteredMentors = filterUsers(users.mentors, "mentor");
 
-  const startEdit = (user, type) => {
-    setEditingUser({ ...user, type });
-    setEditForm({
-      name: user.name,
-      email: user.email,
-      roll_number: user.roll_number || "",
-      branch: user.branch || "CSE",
-    });
+  // Helper to get initials for avatar
+  const getInitials = (name) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
-
-  const cancelEdit = () => {
-    setEditingUser(null);
-    setEditForm({ name: "", email: "", roll_number: "", branch: "" });
-  };
-
-  const saveEdit = async () => {
-    if (!editForm.name || !editForm.email) {
-      toast.error("Name and email are required");
-      return;
-    }
-    try {
-      const payload = {
-        name: editForm.name,
-        email: editForm.email,
-        role: editingUser.type === "student" ? "student" : "mentor",
-        ...(editingUser.type === "student" && {
-          roll_number: editForm.roll_number,
-          branch: editForm.branch,
-        }),
-      };
-      await api.put(`/users.php?id=${editingUser.id}`, payload);
-      toast.success("User updated");
-      cancelEdit();
-      fetchUsers();
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Update failed");
-    }
-  };
-
-  if (loading) return <div className="text-center p-10">Loading...</div>;
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="max-w-7xl mx-auto">
+      {/* Header */}
       <div className="mb-8">
         <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent">
           👥 Team Members
         </h2>
         <p className="text-gray-500 text-sm mt-1">
-          Manage mentors and students
+          Connect with mentors and students in your department
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Mentors Section */}
-        <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
-          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                />
-              </svg>
-              Mentors ({mentors.length})
-            </h3>
-          </div>
-          <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
-            {mentors.length === 0 ? (
-              <div className="p-6 text-center text-gray-400">
-                No mentors found
-              </div>
-            ) : (
-              mentors.map((m) => (
-                <div
-                  key={m.id}
-                  className="p-4 hover:bg-gray-50 transition group"
-                >
-                  {editingUser?.id === m.id &&
-                  editingUser?.type === "mentor" ? (
-                    <div className="space-y-3">
-                      <input
-                        type="text"
-                        className="w-full border rounded-lg p-2"
-                        placeholder="Name"
-                        value={editForm.name}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, name: e.target.value })
-                        }
-                      />
-                      <input
-                        type="email"
-                        className="w-full border rounded-lg p-2"
-                        placeholder="Email"
-                        value={editForm.email}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, email: e.target.value })
-                        }
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={saveEdit}
-                          className="bg-green-600 text-white px-3 py-1 rounded"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="bg-gray-500 text-white px-3 py-1 rounded"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow">
-                          {m.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-800">
-                            {m.name}
-                          </p>
-                          <p className="text-sm text-gray-500">{m.email}</p>
-                        </div>
-                      </div>
-                      {userRole === "admin" && (
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                          <button
-                            onClick={() => startEdit(m, "mentor")}
-                            className="text-blue-600 hover:text-blue-800 p-1"
-                            title="Edit"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(m.id, "Mentor")}
-                            className="text-red-600 hover:text-red-800 p-1"
-                            title="Delete"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center border border-gray-100">
+        <div className="relative w-full sm:w-80">
+          <svg
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search by name, email or roll number..."
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-
-        {/* Students Section */}
-        <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
-          <div className="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-4">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
-              </svg>
-              Students ({students.length})
-            </h3>
-          </div>
-          <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
-            {students.length === 0 ? (
-              <div className="p-6 text-center text-gray-400">
-                No students found
-              </div>
-            ) : (
-              students.map((s) => (
-                <div
-                  key={s.id}
-                  className="p-4 hover:bg-gray-50 transition group"
-                >
-                  {editingUser?.id === s.id &&
-                  editingUser?.type === "student" ? (
-                    <div className="space-y-3">
-                      <input
-                        type="text"
-                        className="w-full border rounded-lg p-2"
-                        placeholder="Name"
-                        value={editForm.name}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, name: e.target.value })
-                        }
-                      />
-                      <input
-                        type="email"
-                        className="w-full border rounded-lg p-2"
-                        placeholder="Email"
-                        value={editForm.email}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, email: e.target.value })
-                        }
-                      />
-                      <input
-                        type="text"
-                        className="w-full border rounded-lg p-2"
-                        placeholder="Roll Number"
-                        value={editForm.roll_number}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            roll_number: e.target.value,
-                          })
-                        }
-                      />
-                      <select
-                        className="w-full border rounded-lg p-2"
-                        value={editForm.branch}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, branch: e.target.value })
-                        }
-                      >
-                        <option>CSE</option>
-                        <option>IT</option>
-                        <option>Mechanical</option>
-                        <option>Civil</option>
-                      </select>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={saveEdit}
-                          className="bg-green-600 text-white px-3 py-1 rounded"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="bg-gray-500 text-white px-3 py-1 rounded"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center text-white font-bold text-lg shadow">
-                          {s.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-800">
-                            {s.name}
-                          </p>
-                          <p className="text-sm text-gray-500">{s.email}</p>
-                          <p className="text-xs text-gray-400">
-                            {s.roll_number} • {s.branch}
-                          </p>
-                        </div>
-                      </div>
-                      {userRole === "admin" && (
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                          <button
-                            onClick={() => startEdit(s, "student")}
-                            className="text-blue-600 hover:text-blue-800 p-1"
-                            title="Edit"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(s.id, "Student")}
-                            className="text-red-600 hover:text-red-800 p-1"
-                            title="Delete"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setFilterRole("all")}
+            className={`px-4 py-2 rounded-lg transition ${
+              filterRole === "all"
+                ? "bg-purple-600 text-white shadow-md"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setFilterRole("mentor")}
+            className={`px-4 py-2 rounded-lg transition ${
+              filterRole === "mentor"
+                ? "bg-purple-600 text-white shadow-md"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            👨‍🏫 Mentors
+          </button>
+          <button
+            onClick={() => setFilterRole("student")}
+            className={`px-4 py-2 rounded-lg transition ${
+              filterRole === "student"
+                ? "bg-purple-600 text-white shadow-md"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            👨‍🎓 Students
+          </button>
         </div>
       </div>
+
+      {/* Mentors Section */}
+      {(filterRole === "all" || filterRole === "mentor") && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+              👨‍🏫
+            </div>
+            <h3 className="text-xl font-bold text-gray-800">Mentors</h3>
+            <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+              {filteredMentors.length}
+            </span>
+          </div>
+          {filteredMentors.length === 0 ? (
+            <div className="bg-gray-50 rounded-xl p-8 text-center">
+              <p className="text-gray-400">No mentors found</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredMentors.map((mentor) => (
+                <div
+                  key={mentor.id}
+                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 group"
+                >
+                  <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white font-bold text-lg shadow">
+                        {getInitials(mentor.name)}
+                      </div>
+                      <div>
+                        <h4 className="text-white font-semibold text-lg">
+                          {mentor.name}
+                        </h4>
+                        <p className="text-purple-100 text-xs flex items-center gap-1">
+                          <span>🎓</span> Mentor
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span>{mentor.email}</span>
+                    </div>
+                    {mentor.branch && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <svg
+                          className="w-4 h-4 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                          />
+                        </svg>
+                        <span>{mentor.branch}</span>
+                      </div>
+                    )}
+                    {mentor.roll_number && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <svg
+                          className="w-4 h-4 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 20h10M5 9h14M5 5h14M5 13h14M5 17h14"
+                          />
+                        </svg>
+                        <span>ID: {mentor.roll_number}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Students Section */}
+      {(filterRole === "all" || filterRole === "student") && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-teal-600 flex items-center justify-center text-white text-sm font-bold">
+              👨‍🎓
+            </div>
+            <h3 className="text-xl font-bold text-gray-800">Students</h3>
+            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+              {filteredStudents.length}
+            </span>
+          </div>
+          {filteredStudents.length === 0 ? (
+            <div className="bg-gray-50 rounded-xl p-8 text-center">
+              <p className="text-gray-400">No students found</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredStudents.map((student) => (
+                <div
+                  key={student.id}
+                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 group"
+                >
+                  <div className="bg-gradient-to-r from-green-600 to-teal-600 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white font-bold text-lg shadow">
+                        {getInitials(student.name)}
+                      </div>
+                      <div>
+                        <h4 className="text-white font-semibold text-lg">
+                          {student.name}
+                        </h4>
+                        <p className="text-green-100 text-xs flex items-center gap-1">
+                          <span>📚</span> Student
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span>{student.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 20h10M5 9h14M5 5h14M5 13h14M5 17h14"
+                        />
+                      </svg>
+                      <span>Roll: {student.roll_number}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                        />
+                      </svg>
+                      <span>Branch: {student.branch}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

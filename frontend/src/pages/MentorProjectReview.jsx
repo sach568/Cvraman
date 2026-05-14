@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import api from "../api";
+import { getProject, updateProject, getComments, addComment } from "../api";
 import toast from "react-hot-toast";
 
 export default function MentorProjectReview() {
@@ -8,70 +8,84 @@ export default function MentorProjectReview() {
   const [project, setProject] = useState(null);
   const [status, setStatus] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [rating, setRating] = useState(0);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
-
   useEffect(() => {
-    loadData();
+    load();
   }, [id]);
-
-  const loadData = async () => {
-    const p = await api.get(`/projects.php?id=${id}`);
+  const load = async () => {
+    const p = await getProject(id);
     setProject(p.data);
     setStatus(p.data.status);
     setFeedback(p.data.feedback || "");
-    const c = await api.get(`/comments.php?project_id=${id}`);
+    setRating(p.data.rating || 0);
+    const c = await getComments(id);
     setComments(c.data);
   };
-
-  const updateStatus = async () => {
-    await api.put(`/projects.php?id=${id}`, { status, feedback });
-    toast.success("Updated");
-    loadData();
+  const update = async () => {
+    await updateProject(id, { status, feedback, rating });
+    toast.success("Review saved");
+    load();
   };
-
-  const addComment = async () => {
-    if (!newComment.trim()) return;
-    await api.post("/comments.php", { project_id: id, comment: newComment });
+  const postComment = async () => {
+    if (!newComment) return;
+    await addComment(id, newComment);
     setNewComment("");
-    loadData();
+    load();
   };
-
-  if (!project) return <div className="text-center p-10">Loading...</div>;
-
+  if (!project) return <div>Loading...</div>;
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
-      <h2 className="text-2xl font-bold mb-4">Review: {project.title}</h2>
-      <p>
-        <strong>Student:</strong> {project.student_name} ({project.roll_number})
-      </p>
-      <p>
-        <strong>Subject:</strong> {project.subject_name}
-      </p>
-      <p>
-        <strong>Branch:</strong> {project.branch}
-      </p>
-      <p>
+      <h2 className="text-2xl font-bold mb-4">📋 Review: {project.title}</h2>
+      <div className="grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded mb-4">
+        <div>
+          <strong>Student:</strong> {project.student_name}
+        </div>
+        <div>
+          <strong>Roll:</strong> {project.roll_number}
+        </div>
+        <div>
+          <strong>Subject:</strong> {project.subject_name}
+        </div>
+        <div>
+          <strong>Branch:</strong> {project.branch}
+        </div>
+      </div>
+      <p className="mb-4">
         <strong>Description:</strong>
         <br />
         {project.description}
       </p>
       {project.file_path && (
-        <p>
-          <a
-            href={`http://localhost/cvr-pms-backend/uploads/${project.file_path}`}
-            target="_blank"
-            className="text-blue-600"
-          >
-            Download File
-          </a>
-        </p>
+        <a
+          href={`http://localhost/cvru-new/backend/uploads/${project.file_path}`}
+          target="_blank"
+          className="text-blue-600 mb-4 inline-block"
+        >
+          📎 Download File
+        </a>
       )}
-      <hr className="my-4" />
       <div className="mb-4">
-        <label className="block font-medium">Status</label>
+        <label className="block font-bold">Rating</label>
+        <div className="flex gap-2">
+          {Array(5)
+            .fill()
+            .map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setRating(i + 1)}
+                className={`text-2xl ${i < rating ? "text-yellow-400" : "text-gray-300"}`}
+              >
+                ★
+              </button>
+            ))}
+        </div>
+      </div>
+      <div className="mb-4">
+        <label className="block font-bold">Status</label>
         <select
-          className="w-full border rounded p-2"
+          className="border p-2 w-full"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
@@ -81,44 +95,48 @@ export default function MentorProjectReview() {
         </select>
       </div>
       <div className="mb-4">
-        <label className="block font-medium">Feedback</label>
+        <label className="block font-bold">Feedback</label>
         <textarea
           rows="3"
-          className="w-full border rounded p-2"
+          className="border p-2 w-full"
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
         />
       </div>
       <button
-        onClick={updateStatus}
-        className="bg-blue-600 text-white px-4 py-2 rounded"
+        onClick={update}
+        className="bg-indigo-600 text-white px-4 py-2 rounded mb-6"
       >
-        Update Status
+        Save Review
       </button>
       <hr className="my-4" />
-      <h3 className="font-bold text-lg">Discussion</h3>
-      {comments.map((c) => (
-        <div key={c.id} className="border p-2 mb-2 rounded">
-          <strong>{c.name}</strong>{" "}
-          <span className="text-xs text-gray-500">
-            {new Date(c.created_at).toLocaleString()}
-          </span>
-          <p>{c.comment}</p>
-        </div>
-      ))}
-      <textarea
-        rows="2"
-        className="w-full border rounded p-2 mt-2"
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)}
-        placeholder="Write a comment..."
-      ></textarea>
-      <button
-        onClick={addComment}
-        className="mt-2 bg-gray-600 text-white px-4 py-2 rounded"
-      >
-        Post Comment
-      </button>
+      <h3 className="font-bold text-lg mb-3">💬 Discussion</h3>
+      <div className="max-h-64 overflow-y-auto mb-3">
+        {comments.map((c) => (
+          <div key={c.id} className="bg-gray-100 p-2 mb-2 rounded">
+            <span className="font-semibold">{c.name}</span>{" "}
+            <span className="text-xs text-gray-500">
+              {new Date(c.created_at).toLocaleString()}
+            </span>
+            <p>{c.comment}</p>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <textarea
+          className="border p-2 flex-1"
+          rows="2"
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder="Write comment..."
+        />
+        <button
+          onClick={postComment}
+          className="bg-gray-800 text-white px-4 rounded"
+        >
+          Post
+        </button>
+      </div>
     </div>
   );
 }

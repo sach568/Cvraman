@@ -4,6 +4,4 @@
     RewriteRule .* - [E=REQUEST_METHOD:PUT]
     RewriteCond %{REQUEST_METHOD} DELETE
     RewriteRule .* - [E=REQUEST_METHOD:DELETE]
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^ index.php [QSA,L]
 </IfModule>

@@ -1,235 +1,185 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { register } from "../api";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { getProjects, submitProject, deleteProject } from "../api";
 import toast from "react-hot-toast";
 
-export default function Register({ setUser }) {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    roll_number: "",
-    branch: "CSE",
-    password: "",
-    password_confirmation: "",
-  });
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+export default function Projects() {
+  const [projects, setProjects] = useState([]);
+  const [search, setSearch] = useState("");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isMentor = user.role === "mentor";
+  const isStudent = user.role === "student";
 
-  const validate = () => {
-    const newErrors = {};
-    if (!form.name.trim()) newErrors.name = "Full name is required";
-    if (!form.email.trim()) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(form.email))
-      newErrors.email = "Email is invalid";
-    if (!form.roll_number.trim())
-      newErrors.roll_number = "Roll number is required";
-    if (!form.password) newErrors.password = "Password is required";
-    else if (form.password.length < 4)
-      newErrors.password = "Password must be at least 4 characters";
-    if (form.password !== form.password_confirmation)
-      newErrors.password_confirmation = "Passwords do not match";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  useEffect(() => {
+    fetchProjects();
+  }, [search]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setLoading(true);
+  const fetchProjects = async () => {
     try {
-      const res = await register(form);
-      if (res.data.success) {
-        setUser(res.data.user);
-        toast.success("Registration successful! Welcome aboard 🎉");
-        navigate("/dashboard");
-      } else {
-        toast.error(res.data.error || "Registration failed");
-      }
+      const res = await getProjects(search);
+      setProjects(res.data);
     } catch (err) {
-      const msg = err.response?.data?.error || "Something went wrong";
-      toast.error(msg);
-      if (msg.includes("Email")) setErrors({ email: msg });
-      else if (msg.includes("Roll")) setErrors({ roll_number: msg });
-    } finally {
-      setLoading(false);
+      toast.error("Failed to load projects");
     }
   };
 
+  const handleSubmit = async (id) => {
+    try {
+      await submitProject(id);
+      toast.success("Project submitted for review");
+      fetchProjects();
+    } catch (err) {
+      toast.error("Submission failed");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this project?")) {
+      try {
+        await deleteProject(id);
+        toast.success("Project deleted");
+        fetchProjects();
+      } catch (err) {
+        toast.error("Delete failed");
+      }
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      draft: { label: "Draft", color: "bg-gray-500" },
+      submitted: { label: "Submitted", color: "bg-yellow-500" },
+      under_review: { label: "Under Review", color: "bg-blue-500" },
+      approved: { label: "Approved", color: "bg-green-500" },
+      revisions_needed: { label: "Revisions Needed", color: "bg-red-500" },
+    };
+    const s = statusMap[status] || { label: status, color: "bg-gray-500" };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs text-white ${s.color}`}>
+        {s.label}
+      </span>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-800 to-teal-700 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-5">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <span>📝</span> Student Registration
-          </h2>
-          <p className="text-green-100 text-sm mt-1">
-            Join the CVR Project Management System
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Name */}
-          <div>
-            <label className="block text-gray-700 text-sm font-semibold mb-1">
-              Full Name *
-            </label>
-            <input
-              type="text"
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                errors.name ? "border-red-500" : "border-gray-300"
-              }`}
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-            {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-gray-700 text-sm font-semibold mb-1">
-              Email Address *
-            </label>
-            <input
-              type="email"
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                errors.email ? "border-red-500" : "border-gray-300"
-              }`}
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-            )}
-          </div>
-
-          {/* Roll Number */}
-          <div>
-            <label className="block text-gray-700 text-sm font-semibold mb-1">
-              Roll Number *
-            </label>
-            <input
-              type="text"
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                errors.roll_number ? "border-red-500" : "border-gray-300"
-              }`}
-              value={form.roll_number}
-              onChange={(e) =>
-                setForm({ ...form, roll_number: e.target.value })
-              }
-            />
-            {errors.roll_number && (
-              <p className="text-red-500 text-xs mt-1">{errors.roll_number}</p>
-            )}
-          </div>
-
-          {/* Branch */}
-          <div>
-            <label className="block text-gray-700 text-sm font-semibold mb-1">
-              Branch
-            </label>
-            <select
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              value={form.branch}
-              onChange={(e) => setForm({ ...form, branch: e.target.value })}
-            >
-              <option value="CSE">Computer Science (CSE)</option>
-              <option value="IT">Information Technology (IT)</option>
-              <option value="Mechanical">Mechanical Engineering</option>
-              <option value="Civil">Civil Engineering</option>
-              <option value="ECE">Electronics & Communication</option>
-              <option value="EEE">Electrical & Electronics</option>
-            </select>
-          </div>
-
-          {/* Password */}
-          <div>
-            <label className="block text-gray-700 text-sm font-semibold mb-1">
-              Password *
-            </label>
-            <input
-              type="password"
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                errors.password ? "border-red-500" : "border-gray-300"
-              }`}
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-            />
-            {errors.password && (
-              <p className="text-red-500 text-xs mt-1">{errors.password}</p>
-            )}
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <label className="block text-gray-700 text-sm font-semibold mb-1">
-              Confirm Password *
-            </label>
-            <input
-              type="password"
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                errors.password_confirmation
-                  ? "border-red-500"
-                  : "border-gray-300"
-              }`}
-              value={form.password_confirmation}
-              onChange={(e) =>
-                setForm({ ...form, password_confirmation: e.target.value })
-              }
-            />
-            {errors.password_confirmation && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.password_confirmation}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-3 rounded-lg transition transform hover:scale-[1.01] disabled:opacity-50"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Creating account...
-              </span>
-            ) : (
-              "Register Now →"
-            )}
-          </button>
-
-          <p className="text-center text-gray-600 text-sm mt-4">
-            Already have an account?{" "}
+    <div>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-600 bg-clip-text text-transparent">
+          📁{" "}
+          {isStudent
+            ? "My Projects"
+            : isMentor
+              ? "Assigned Projects"
+              : "All Projects"}
+        </h2>
+        <div className="flex gap-3 w-full md:w-auto">
+          <input
+            type="text"
+            placeholder="Search by title, description..."
+            className="border border-gray-300 rounded-lg px-4 py-2 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {isStudent && (
             <Link
-              to="/login"
-              className="text-green-600 hover:underline font-semibold"
+              to="/projects/create"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"
             >
-              Sign in here
+              <span>➕</span> New Project
             </Link>
-          </p>
-        </form>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px]">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left text-sm font-semibold text-gray-700">
+                  Title
+                </th>
+                <th className="p-3 text-left text-sm font-semibold text-gray-700">
+                  Subject
+                </th>
+                <th className="p-3 text-left text-sm font-semibold text-gray-700">
+                  {isMentor ? "Student" : "Mentor"}
+                </th>
+                <th className="p-3 text-left text-sm font-semibold text-gray-700">
+                  Status
+                </th>
+                <th className="p-3 text-left text-sm font-semibold text-gray-700">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {projects.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-gray-400">
+                    No projects found.{" "}
+                    {isStudent && (
+                      <Link to="/projects/create" className="text-blue-600">
+                        Create one
+                      </Link>
+                    )}
+                  </td>
+                </tr>
+              ) : (
+                projects.map((p) => (
+                  <tr
+                    key={p.id}
+                    className="border-b border-gray-100 hover:bg-gray-50 transition"
+                  >
+                    <td className="p-3 font-medium text-gray-800">{p.title}</td>
+                    <td className="p-3 text-gray-600">{p.subject_name}</td>
+                    <td className="p-3 text-gray-600">
+                      {isMentor ? p.student_name : p.mentor_name}
+                    </td>
+                    <td className="p-3">{getStatusBadge(p.status)}</td>
+                    <td className="p-3">
+                      {isStudent && p.status === "draft" && (
+                        <div className="flex gap-3">
+                          <Link
+                            to={`/projects/edit/${p.id}`}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            Edit
+                          </Link>
+                          <button
+                            onClick={() => handleSubmit(p.id)}
+                            className="text-green-600 hover:text-green-800 text-sm font-medium"
+                          >
+                            Submit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p.id)}
+                            className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                      {isMentor && (
+                        <Link
+                          to={`/projects/review/${p.id}`}
+                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                        >
+                          Review
+                        </Link>
+                      )}
+                      {isStudent && p.status !== "draft" && (
+                        <span className="text-gray-400 text-sm">
+                          No actions
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

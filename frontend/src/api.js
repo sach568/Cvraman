@@ -15,10 +15,16 @@ api.interceptors.request.use(config => {
 });
 
 // ========== AUTH ==========
-export const login = (email, password) => api.post('/auth.php', { email, password });
+
+// ========== AUTHENTICATION (use login.php, NOT auth.php) ==========
+export const login = (email, password) => api.post('/login.php', { email, password });
 export const register = (userData) => api.post('/register.php', userData);
 export const logout = () => api.post('/logout.php');
 export const getUser = () => api.get('/get_user.php');
+// export const login = (email, password) => api.post('/auth.php', { email, password });
+// export const register = (userData) => api.post('/register.php', userData);
+// export const getUser = () => api.get('/get_user.php');
+// export const logout = () => api.post('/logout.php');
 
 // ========== PROJECTS ==========
 export const getProjects = (search = '') => api.get(`/projects.php?search=${search}`);

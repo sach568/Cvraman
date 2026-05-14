@@ -1,13 +1,9 @@
 <?php
-require_once '../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 requireLogin();
 
 $user_id = $_SESSION['user_id'];
 $method = $_SERVER['REQUEST_METHOD'];
-
-// Enable error reporting for debugging (remove in production)
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 if ($method === 'GET') {
   $res = mysqli_query($conn, "SELECT * FROM project_files ORDER BY id DESC");
@@ -15,39 +11,37 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
-  // Check if file was uploaded
   if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-    $errorMsg = isset($_FILES['file']) ? 'Upload error code: ' . $_FILES['file']['error'] : 'No file uploaded';
-    sendJSON(['error' => $errorMsg], 400);
+    sendJSON(['error' => 'File upload error'], 400);
   }
 
-  $project_id = (int) ($_POST['project_id'] ?? 0);
-  $fileName = basename($_FILES['file']['name']);
-  // Sanitize filename
-  $filePath = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $fileName);
-  $targetDir = __DIR__ . '/../uploads/';
+  $project_id_raw = $_POST['project_id'] ?? '';
+  // If empty, set to NULL; otherwise cast to int
+  $project_id = ($project_id_raw === '') ? 'NULL' : (int) $project_id_raw;
 
-  // Create uploads directory if it doesn't exist
-  if (!is_dir($targetDir)) {
-    if (!mkdir($targetDir, 0777, true)) {
-      sendJSON(['error' => 'Failed to create uploads directory'], 500);
+  $originalName = basename($_FILES['file']['name']);
+  $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+  $safeName = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+  $uploadDir = __DIR__ . '/../uploads/';
+  $targetPath = $uploadDir . $safeName;
+
+  if (!is_dir($uploadDir))
+    mkdir($uploadDir, 0777, true);
+
+  if (move_uploaded_file($_FILES['file']['tmp_name'], $targetPath)) {
+    if ($project_id === 'NULL') {
+      $query = "INSERT INTO project_files (project_id, user_id, file_name, file_path) VALUES (NULL, $user_id, '$originalName', '$safeName')";
+    } else {
+      $query = "INSERT INTO project_files (project_id, user_id, file_name, file_path) VALUES ($project_id, $user_id, '$originalName', '$safeName')";
     }
-  }
-
-  $targetFile = $targetDir . $filePath;
-
-  // Move uploaded file
-  if (move_uploaded_file($_FILES['file']['tmp_name'], $targetFile)) {
-    $stmt = mysqli_prepare($conn, "INSERT INTO project_files (project_id, user_id, file_name, file_path) VALUES (?, ?, ?, ?)");
-    mysqli_stmt_bind_param($stmt, "iiss", $project_id, $user_id, $fileName, $filePath);
-    if (mysqli_stmt_execute($stmt)) {
+    if (mysqli_query($conn, $query)) {
       sendJSON(['success' => true]);
     } else {
-      sendJSON(['error' => 'Database insert failed: ' . mysqli_error($conn)], 500);
+      unlink($targetPath);
+      sendJSON(['error' => 'DB insert failed: ' . mysqli_error($conn)], 500);
     }
-    mysqli_stmt_close($stmt);
   } else {
-    sendJSON(['error' => 'Failed to move uploaded file. Check uploads folder permissions.'], 500);
+    sendJSON(['error' => 'Move failed'], 500);
   }
 }
 ?>

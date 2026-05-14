@@ -5,15 +5,19 @@ session_start();
 $host = 'localhost';
 $user = 'root';
 $pass = '';
-$db = 'cvr_pms';
+$dbname = 'final_project_ms';
 
-$conn = mysqli_connect($host, $user, $pass, $db);
-if (!$conn)
-  die(json_encode(['error' => 'DB connection failed']));
+$conn = mysqli_connect($host, $user, $pass, $dbname);
+if (!$conn) {
+  http_response_code(500);
+  echo json_encode(['error' => 'DB connection failed: ' . mysqli_connect_error()]);
+  exit;
+}
 
 function sendJSON($data, $status = 200)
 {
   http_response_code($status);
+  header('Content-Type: application/json');
   echo json_encode($data);
   exit;
 }
