@@ -6,19 +6,19 @@ $user_id = $_SESSION['user_id'];
 $role = $_SESSION['role'];
 
 if ($role === 'student') {
-  $total = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM projects WHERE student_id=$user_id"))['count'];
-  $completed = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM tasks WHERE assigned_to=$user_id AND status='completed'"))['count'];
-  $pending = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM tasks WHERE assigned_to=$user_id AND status!='completed'"))['count'];
-  $overdue = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM tasks WHERE assigned_to=$user_id AND due_date < CURDATE() AND status!='completed'"))['count'];
+  $total = $conn->query("SELECT COUNT(*) as cnt FROM projects WHERE student_id=$user_id")->fetch_assoc()['cnt'];
+  $completed = $conn->query("SELECT COUNT(*) as cnt FROM tasks WHERE assigned_to=$user_id AND status='completed'")->fetch_assoc()['cnt'];
+  $pending = $conn->query("SELECT COUNT(*) as cnt FROM tasks WHERE assigned_to=$user_id AND status!='completed'")->fetch_assoc()['cnt'];
+  $overdue = $conn->query("SELECT COUNT(*) as cnt FROM tasks WHERE assigned_to=$user_id AND due_date < CURDATE() AND status!='completed'")->fetch_assoc()['cnt'];
   sendJSON(['totalProjects' => $total, 'tasksCompleted' => $completed, 'pendingTasks' => $pending, 'overdueTasks' => $overdue]);
 } elseif ($role === 'mentor') {
-  $total = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM projects WHERE mentor_id=$user_id"))['count'];
-  $pending = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM projects WHERE mentor_id=$user_id AND status='submitted'"))['count'];
+  $total = $conn->query("SELECT COUNT(*) as cnt FROM projects WHERE mentor_id=$user_id")->fetch_assoc()['cnt'];
+  $pending = $conn->query("SELECT COUNT(*) as cnt FROM projects WHERE mentor_id=$user_id AND status='submitted'")->fetch_assoc()['cnt'];
   sendJSON(['totalProjects' => $total, 'pendingReviews' => $pending]);
 } else {
-  $projects = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM projects"))['count'];
-  $students = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM users WHERE role='student'"))['count'];
-  $mentors = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM users WHERE role='mentor'"))['count'];
+  $projects = $conn->query("SELECT COUNT(*) as cnt FROM projects")->fetch_assoc()['cnt'];
+  $students = $conn->query("SELECT COUNT(*) as cnt FROM users WHERE role='student'")->fetch_assoc()['cnt'];
+  $mentors = $conn->query("SELECT COUNT(*) as cnt FROM users WHERE role='mentor'")->fetch_assoc()['cnt'];
   sendJSON(['totalProjects' => $projects, 'students' => $students, 'mentors' => $mentors]);
 }
 ?>

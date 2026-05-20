@@ -9,7 +9,6 @@ export default function Layout({ user, setUser }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Fetch notifications every 30 seconds
   useEffect(() => {
     if (user) {
       fetchNotifications();
@@ -27,7 +26,6 @@ export default function Layout({ user, setUser }) {
     }
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -43,15 +41,15 @@ export default function Layout({ user, setUser }) {
   const handleLogout = async () => {
     await logout();
     setUser(null);
+    localStorage.removeItem("user");
     navigate("/login");
     toast.success("Logged out");
   };
 
-  // Navigation items based on role – Dashboard always first
   const getNavItems = () => {
-    const restCommon = [
+    const common = [
+      { path: "/dashboard", label: "Dashboard", icon: "📊" },
       { path: "/tasks", label: "Tasks", icon: "✅" },
-      { path: "/notifications", label: "Notifications", icon: "🔔" },
       { path: "/kanban", label: "Kanban", icon: "🎯" },
       { path: "/calendar", label: "Calendar", icon: "📅" },
       { path: "/team", label: "Team", icon: "👥" },
@@ -59,7 +57,6 @@ export default function Layout({ user, setUser }) {
       { path: "/messages", label: "Messages", icon: "💬" },
       { path: "/files", label: "Files", icon: "📎" },
     ];
-
     let roleSpecific = [];
     if (user?.role === "student") {
       roleSpecific = [
@@ -73,22 +70,17 @@ export default function Layout({ user, setUser }) {
     } else if (user?.role === "admin") {
       roleSpecific = [
         { path: "/admin/subjects", label: "Subjects", icon: "📚" },
-        { path: "/admin/users", label: "Manage Users", icon: "👤" },
+        { path: "/admin/users", label: "Users", icon: "👤" },
       ];
     }
-
-    return [
-      { path: "/dashboard", label: "Dashboard", icon: "📊" },
-      ...roleSpecific,
-      ...restCommon,
-    ];
+    return [...roleSpecific, ...common];
   };
 
   const navItems = getNavItems();
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar (unchanged) */}
+      {/* Sidebar */}
       <aside className="w-72 bg-gray-900 text-white flex flex-col shadow-xl">
         <div className="p-5 border-b border-gray-700">
           <h2 className="text-2xl font-bold">📋 PMS</h2>
@@ -117,14 +109,13 @@ export default function Layout({ user, setUser }) {
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white shadow-sm p-4 flex justify-between items-center">
           <h1 className="text-xl font-semibold">
             Welcome back, {user?.name}! 🎉
           </h1>
           <div className="flex items-center space-x-4">
-            {/* Notification Bell */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -149,8 +140,6 @@ export default function Layout({ user, setUser }) {
                   </span>
                 )}
               </button>
-
-              {/* Dropdown */}
               {showNotifications && (
                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
                   <div className="p-3 border-b border-gray-200 flex justify-between items-center">
@@ -171,16 +160,14 @@ export default function Layout({ user, setUser }) {
                         No notifications yet
                       </div>
                     ) : (
-                      notifications.slice(0, 5).map((notif) => (
+                      notifications.slice(0, 5).map((n) => (
                         <div
-                          key={notif.id}
+                          key={n.id}
                           className="p-3 border-b border-gray-100 hover:bg-gray-50"
                         >
-                          <p className="text-sm text-gray-800">
-                            {notif.message}
-                          </p>
+                          <p className="text-sm text-gray-800">{n.message}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            {new Date(notif.created_at).toLocaleString()}
+                            {new Date(n.created_at).toLocaleString()}
                           </p>
                         </div>
                       ))
@@ -189,19 +176,15 @@ export default function Layout({ user, setUser }) {
                 </div>
               )}
             </div>
-
-            {/* User info */}
             <span className="text-gray-600 capitalize">{user?.role}</span>
             <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
               {user?.name?.charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
-
         <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
-
         <footer className="bg-white border-t p-4 text-center text-gray-500 text-sm">
           © {new Date().getFullYear()} Dr. C.V. Raman University | Developed by
           Nishi And Co

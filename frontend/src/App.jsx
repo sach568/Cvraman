@@ -34,11 +34,12 @@ function App() {
       .catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center mt-10">Loading...</div>;
+  if (loading)
+    return <div className="text-center mt-10 text-gray-500">Loading...</div>;
 
   return (
     <BrowserRouter>
-      <Toaster position="top-right" />
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <Routes>
         <Route path="/login" element={<Login setUser={setUser} />} />
         <Route path="/register" element={<Register setUser={setUser} />} />
@@ -46,6 +47,12 @@ function App() {
           <Route path="/" element={<Navigate to="/dashboard" />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/create" element={<CreateProject />} />
+          <Route path="/projects/edit/:id" element={<EditProject />} />
+          <Route
+            path="/projects/review/:id"
+            element={<MentorProjectReview />}
+          />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/kanban" element={<KanbanBoard />} />
           <Route path="/calendar" element={<Calendar />} />
@@ -53,13 +60,7 @@ function App() {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/files" element={<Files />} />
-          <Route path="/projects/create" element={<CreateProject />} />
-          <Route path="/projects/edit/:id" element={<EditProject />} />
           <Route path="/notifications" element={<Notifications />} />
-          <Route
-            path="/projects/review/:id"
-            element={<MentorProjectReview />}
-          />
           <Route path="/admin/subjects" element={<AdminSubjects />} />
           <Route path="/admin/users" element={<AdminUsers />} />
         </Route>

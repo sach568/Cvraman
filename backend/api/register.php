@@ -5,23 +5,36 @@ $input = json_decode(file_get_contents('php://input'), true);
 if (!$input)
     sendJSON(['error' => 'Invalid JSON'], 400);
 
-$name = mysqli_real_escape_string($conn, $input['name']);
-$email = mysqli_real_escape_string($conn, $input['email']);
-$roll = mysqli_real_escape_string($conn, $input['roll_number']);
-$branch = $input['branch'];
-$password = $input['password']; // plain text
-$confirm = $input['password_confirmation'];
+$name = trim($input['name'] ?? '');
+$email = trim($input['email'] ?? '');
+$roll = trim($input['roll_number'] ?? '');
+$branch = trim($input['branch'] ?? 'CSE');
+$password = $input['password'] ?? '';
+$confirm = $input['password_confirmation'] ?? '';
 
-if ($password != $confirm)
+if (empty($name))
+    sendJSON(['error' => 'Name required'], 400);
+if (!filter_var($email, FILTER_VALIDATE_EMAIL))
+    sendJSON(['error' => 'Invalid email'], 400);
+if (empty($roll))
+    sendJSON(['error' => 'Roll number required'], 400);
+if (strlen($password) < 6)
+    sendJSON(['error' => 'Password must be at least 6 characters'], 400);
+if ($password !== $confirm)
     sendJSON(['error' => 'Passwords do not match'], 400);
 
-$check = mysqli_query($conn, "SELECT id FROM users WHERE email='$email' OR roll_number='$roll'");
-if (mysqli_num_rows($check) > 0)
-    sendJSON(['error' => 'Email or Roll number exists'], 400);
+$stmt = $conn->prepare("SELECT id FROM users WHERE email = ? OR roll_number = ?");
+$stmt->bind_param("ss", $email, $roll);
+$stmt->execute();
+if ($stmt->get_result()->num_rows > 0)
+    sendJSON(['error' => 'Email or Roll number already exists'], 400);
+$stmt->close();
 
-$q = "INSERT INTO users (name, email, password, role, roll_number, branch) VALUES ('$name','$email','$password','student','$roll','$branch')";
-if (mysqli_query($conn, $q)) {
-    $id = mysqli_insert_id($conn);
+$hashed = password_hash($password, PASSWORD_DEFAULT);
+$stmt = $conn->prepare("INSERT INTO users (name, email, password, role, roll_number, branch) VALUES (?, ?, ?, 'student', ?, ?)");
+$stmt->bind_param("sssss", $name, $email, $hashed, $roll, $branch);
+if ($stmt->execute()) {
+    $id = $stmt->insert_id;
     $_SESSION['user_id'] = $id;
     $_SESSION['name'] = $name;
     $_SESSION['role'] = 'student';

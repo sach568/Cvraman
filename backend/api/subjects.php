@@ -4,39 +4,33 @@ requireLogin();
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-// GET: return all subjects
 if ($method === 'GET') {
-  $res = mysqli_query($conn, "SELECT * FROM subjects ORDER BY id DESC");
-  sendJSON(mysqli_fetch_all($res, MYSQLI_ASSOC));
+  $res = $conn->query("SELECT * FROM subjects ORDER BY id DESC");
+  sendJSON($res->fetch_all(MYSQLI_ASSOC));
 }
 
-// POST: add a new subject (admin only)
 if ($method === 'POST') {
-  if ($_SESSION['role'] !== 'admin')
-    sendJSON(['error' => 'Forbidden'], 403);
-
-  // Read JSON input
+  requireRole('admin');
   $input = json_decode(file_get_contents('php://input'), true);
-  if (!$input) {
+  if (!$input)
     sendJSON(['error' => 'Invalid JSON'], 400);
-  }
   $name = trim($input['name'] ?? '');
-  if (empty($name)) {
+  if (empty($name))
     sendJSON(['error' => 'Subject name required'], 400);
-  }
-  $name = mysqli_real_escape_string($conn, $name);
-  mysqli_query($conn, "INSERT INTO subjects (name) VALUES ('$name')");
+  $stmt = $conn->prepare("INSERT INTO subjects (name) VALUES (?)");
+  $stmt->bind_param("s", $name);
+  $stmt->execute();
   sendJSON(['success' => true]);
 }
 
-// DELETE: remove a subject (admin only)
 if ($method === 'DELETE') {
-  if ($_SESSION['role'] !== 'admin')
-    sendJSON(['error' => 'Forbidden'], 403);
+  requireRole('admin');
   $id = (int) ($_GET['id'] ?? 0);
   if ($id <= 0)
     sendJSON(['error' => 'Invalid subject ID'], 400);
-  mysqli_query($conn, "DELETE FROM subjects WHERE id = $id");
+  $stmt = $conn->prepare("DELETE FROM subjects WHERE id=?");
+  $stmt->bind_param("i", $id);
+  $stmt->execute();
   sendJSON(['success' => true]);
 }
 ?>

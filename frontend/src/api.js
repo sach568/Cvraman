@@ -6,7 +6,6 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
-// For file uploads, override content-type
 api.interceptors.request.use(config => {
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
@@ -15,19 +14,17 @@ api.interceptors.request.use(config => {
 });
 
 // ========== AUTH ==========
-
-// ========== AUTHENTICATION (use login.php, NOT auth.php) ==========
 export const login = (email, password) => api.post('/login.php', { email, password });
 export const register = (userData) => api.post('/register.php', userData);
 export const logout = () => api.post('/logout.php');
 export const getUser = () => api.get('/get_user.php');
-// export const login = (email, password) => api.post('/auth.php', { email, password });
-// export const register = (userData) => api.post('/register.php', userData);
-// export const getUser = () => api.get('/get_user.php');
-// export const logout = () => api.post('/logout.php');
+
+// ========== DASHBOARD & ANALYTICS ==========
+export const getDashboard = () => api.get('/dashboard.php');
+export const getAnalytics = () => api.get('/analytics.php');
 
 // ========== PROJECTS ==========
-export const getProjects = (search = '') => api.get(`/projects.php?search=${search}`);
+export const getProjects = (search = '') => api.get(`/projects.php?search=${encodeURIComponent(search)}`);
 export const getProject = (id) => api.get(`/projects.php?id=${id}`);
 export const createProject = (formData) => api.post('/projects.php', formData);
 export const updateProject = (id, data) => api.put(`/projects.php?id=${id}`, data);
@@ -51,25 +48,19 @@ export const deleteSubject = (id) => api.delete(`/subjects.php?id=${id}`);
 
 // ========== USERS (Admin) ==========
 export const getUsers = () => api.get('/users.php');
-export const getAllUsers = () => api.get('/users.php?all=true');
 export const createUser = (type, data) => api.post('/users.php', { type, ...data });
-export const updateUser = (id, data) => api.put(`/users.php?id=${id}`, data);
-export const deleteUser = (id) => api.delete(`/users.php?id=${id}`);
-// ========== DASHBOARD & ANALYTICS ==========
-export const getDashboard = () => api.get('/dashboard.php');
-export const getAnalytics = () => api.get('/analytics.php');
-export const getGanttData = () => api.get('/gantt.php');
 
 // ========== MESSAGES ==========
 export const getMessages = () => api.get('/messages.php');
-export const sendMessage = (receiverId, message) => api.post('/messages.php', { receiver_id: receiverId, message });
+export const sendMessage = (receiver_id, message) => api.post('/messages.php', { receiver_id, message });
 
 // ========== FILES ==========
 export const getFiles = () => api.get('/files.php');
 export const uploadFile = (formData) => api.post('/files.php', formData);
+export const downloadFile = (filename) => `/api/download.php?file=${encodeURIComponent(filename)}`;
 
 // ========== ACTIVITIES & NOTIFICATIONS ==========
-export const getActivities = () => api.get('/activities.php');
+export const getActivities = (query = '') => api.get(`/activities.php${query ? `?${query}` : ''}`);
 export const getNotifications = () => api.get('/notifications.php');
 
 export default api;

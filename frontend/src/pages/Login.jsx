@@ -7,19 +7,49 @@ export default function Login({ setUser }) {
   const [role, setRole] = useState("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // डेमो क्रेडेंशियल्स – जैसे डेटाबेस में हैं
+  const demoCredentials = {
+    student: { email: "aman@cvr.edu", password: "student123" },
+    mentor: { email: "deepak.singh@cvr.edu", password: "mentor123" },
+    admin: { email: "admin@cvr.edu", password: "admin123" },
+  };
+
+  const handleDemoLogin = () => {
+    const cred = demoCredentials[role];
+    setEmail(cred.email);
+    setPassword(cred.password);
+    // स्वचालित रूप से सबमिट करें
+    setTimeout(() => {
+      document
+        .getElementById("login-form")
+        .dispatchEvent(
+          new Event("submit", { cancelable: true, bubbles: true }),
+        );
+    }, 100);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email || !password) {
+      toast.error("Please enter email and password");
+      return;
+    }
+    setLoading(true);
     try {
       const res = await login(email, password);
       if (res.data.success) {
         setUser(res.data.user);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
         toast.success(`Welcome ${res.data.user.name}`);
         navigate("/dashboard");
       }
     } catch (err) {
       toast.error(err.response?.data?.error || "Invalid credentials");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,7 +76,7 @@ export default function Login({ setUser }) {
             🔧 Admin
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-8">
+        <form id="login-form" onSubmit={handleSubmit} className="p-8">
           <div className="mb-6">
             <label className="block text-gray-700 text-sm font-bold mb-2">
               {role === "student"
@@ -79,10 +109,21 @@ export default function Login({ setUser }) {
           </div>
           <button
             type="submit"
+            disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition"
           >
-            Login →
+            {loading ? "Logging in..." : "Login →"}
           </button>
+
+          {/* Demo Login Button (वैकल्पिक – एक क्लिक में लॉगिन) */}
+          <button
+            type="button"
+            onClick={handleDemoLogin}
+            className="w-full mt-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 rounded-lg transition text-sm"
+          >
+            Demo Login as {role}
+          </button>
+
           <p className="text-center mt-6 text-sm">
             New student?{" "}
             <a href="/register" className="text-blue-600">

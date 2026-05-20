@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import api from "../api";
+import { getActivities } from "../api";
 
 export default function ActivityFeed({ projectId = null, limit = 10 }) {
   const [activities, setActivities] = useState([]);
@@ -11,7 +11,7 @@ export default function ActivityFeed({ projectId = null, limit = 10 }) {
       const url = projectId
         ? `/activities.php?project_id=${projectId}`
         : "/activities.php";
-      const res = await api.get(url);
+      const res = await getActivities(url);
       setActivities(res.data.slice(0, limit));
     } catch (err) {
       console.error("Failed to load activities");
@@ -22,7 +22,7 @@ export default function ActivityFeed({ projectId = null, limit = 10 }) {
 
   useEffect(() => {
     fetchActivities();
-    const interval = setInterval(fetchActivities, 30000); // refresh every 30s
+    const interval = setInterval(fetchActivities, 30000);
     return () => clearInterval(interval);
   }, [projectId, limit]);
 

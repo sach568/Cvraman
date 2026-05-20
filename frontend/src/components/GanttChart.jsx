@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
-import { getGanttData } from "../api";
+import { getTasks } from "../api";
 
 export default function GanttChart() {
   const [tasks, setTasks] = useState([]);
   useEffect(() => {
-    getGanttData().then((res) => setTasks(res.data));
+    getTasks().then((res) => setTasks(res.data.slice(0, 5)));
   }, []);
   if (!tasks.length)
     return <p className="text-gray-400 text-center">No tasks yet</p>;
   return (
     <div className="space-y-2">
-      {tasks.slice(0, 5).map((task) => (
+      {tasks.map((task) => (
         <div key={task.id}>
           <div className="text-sm font-medium">{task.title}</div>
           <div className="w-full bg-gray-200 rounded-full h-2">

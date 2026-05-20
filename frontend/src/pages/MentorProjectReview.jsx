@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { getProject, updateProject, getComments, addComment } from "../api";
+import {
+  getProject,
+  updateProject,
+  getComments,
+  addComment,
+  downloadFile,
+} from "../api";
 import toast from "react-hot-toast";
 
 export default function MentorProjectReview() {
@@ -11,6 +17,7 @@ export default function MentorProjectReview() {
   const [rating, setRating] = useState(0);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
+
   useEffect(() => {
     load();
   }, [id]);
@@ -59,9 +66,9 @@ export default function MentorProjectReview() {
       </p>
       {project.file_path && (
         <a
-          href={`http://localhost/cvru-new/backend/uploads/${project.file_path}`}
+          href={downloadFile(project.file_path)}
           target="_blank"
-          className="text-blue-600 mb-4 inline-block"
+          className="text-blue-600 inline-block mb-4"
         >
           📎 Download File
         </a>

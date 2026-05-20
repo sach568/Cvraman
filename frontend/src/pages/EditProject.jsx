@@ -18,6 +18,7 @@ export default function EditProject() {
   const [mentors, setMentors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -27,14 +28,14 @@ export default function EditProject() {
           getSubjects(),
           getUsers(),
         ]);
-        const project = projectRes.data;
+        const p = projectRes.data;
         setForm({
-          title: project.title || "",
-          description: project.description || "",
-          branch: project.branch || "CSE",
-          subject_id: project.subject_id || "",
-          mentor_id: project.mentor_id || "",
-          deadline: project.deadline || "",
+          title: p.title,
+          description: p.description,
+          branch: p.branch,
+          subject_id: p.subject_id,
+          mentor_id: p.mentor_id,
+          deadline: p.deadline || "",
         });
         setSubjects(subjectsRes.data);
         setMentors(usersRes.data.mentors);
@@ -48,12 +49,23 @@ export default function EditProject() {
     fetchData();
   }, [id, navigate]);
 
+  const validate = () => {
+    let err = {};
+    if (!form.title.trim()) err.title = "Title required";
+    if (!form.description.trim()) err.description = "Description required";
+    if (!form.subject_id) err.subject_id = "Subject required";
+    if (!form.mentor_id) err.mentor_id = "Mentor required";
+    setErrors(err);
+    return Object.keys(err).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
     setSubmitting(true);
     try {
       await updateProject(id, form);
-      toast.success("Project updated successfully!");
+      toast.success("Project updated!");
       navigate("/projects");
     } catch (err) {
       toast.error(err.response?.data?.error || "Update failed");
@@ -62,67 +74,51 @@ export default function EditProject() {
     }
   };
 
-  if (loading) {
+  if (loading)
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center h-64 items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
-  }
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-green-700 to-teal-600 bg-clip-text text-transparent">
-          ✏️ Edit Project
-        </h2>
-        <p className="text-gray-500 text-sm mt-1">
-          Update your project details
-        </p>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-        <div className="h-2 bg-gradient-to-r from-green-500 to-teal-500"></div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Title */}
+      <h2 className="text-2xl font-bold bg-gradient-to-r from-green-700 to-teal-600 bg-clip-text text-transparent mb-4">
+        ✏️ Edit Project
+      </h2>
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-gray-700 font-semibold mb-1">
-              Project Title *
-            </label>
+            <label className="block font-semibold">Title *</label>
             <input
               type="text"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+              className={`w-full border rounded-lg px-4 py-2 ${errors.title ? "border-red-500" : "border-gray-300"}`}
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              required
             />
+            {errors.title && (
+              <p className="text-red-500 text-xs">{errors.title}</p>
+            )}
           </div>
-
-          {/* Description */}
           <div>
-            <label className="block text-gray-700 font-semibold mb-1">
-              Description *
-            </label>
+            <label className="block font-semibold">Description *</label>
             <textarea
               rows="5"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent transition resize-none"
+              className={`w-full border rounded-lg px-4 py-2 resize-none ${errors.description ? "border-red-500" : "border-gray-300"}`}
               value={form.description}
               onChange={(e) =>
                 setForm({ ...form, description: e.target.value })
               }
-              required
             />
+            {errors.description && (
+              <p className="text-red-500 text-xs">{errors.description}</p>
+            )}
           </div>
-
-          {/* Branch & Deadline */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-700 font-semibold mb-1">
-                Branch
-              </label>
+              <label>Branch</label>
               <select
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white"
+                className="w-full border rounded-lg px-4 py-2"
                 value={form.branch}
                 onChange={(e) => setForm({ ...form, branch: e.target.value })}
               >
@@ -133,98 +129,69 @@ export default function EditProject() {
               </select>
             </div>
             <div>
-              <label className="block text-gray-700 font-semibold mb-1">
-                Deadline
-              </label>
+              <label>Deadline</label>
               <input
                 type="date"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                className="w-full border rounded-lg px-4 py-2"
                 value={form.deadline}
                 onChange={(e) => setForm({ ...form, deadline: e.target.value })}
               />
             </div>
           </div>
-
-          {/* Subject & Mentor */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-700 font-semibold mb-1">
-                Subject *
-              </label>
+              <label>Subject *</label>
               <select
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white"
+                className={`w-full border rounded-lg px-4 py-2 ${errors.subject_id ? "border-red-500" : "border-gray-300"}`}
                 value={form.subject_id}
                 onChange={(e) =>
                   setForm({ ...form, subject_id: e.target.value })
                 }
-                required
               >
-                <option value="">Select Subject</option>
+                <option value="">Select</option>
                 {subjects.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
                 ))}
               </select>
+              {errors.subject_id && (
+                <p className="text-red-500 text-xs">{errors.subject_id}</p>
+              )}
             </div>
             <div>
-              <label className="block text-gray-700 font-semibold mb-1">
-                Mentor *
-              </label>
+              <label>Mentor *</label>
               <select
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white"
+                className={`w-full border rounded-lg px-4 py-2 ${errors.mentor_id ? "border-red-500" : "border-gray-300"}`}
                 value={form.mentor_id}
                 onChange={(e) =>
                   setForm({ ...form, mentor_id: e.target.value })
                 }
-                required
               >
-                <option value="">Select Mentor</option>
+                <option value="">Select</option>
                 {mentors.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name}
                   </option>
                 ))}
               </select>
+              {errors.mentor_id && (
+                <p className="text-red-500 text-xs">{errors.mentor_id}</p>
+              )}
             </div>
           </div>
-
-          {/* Buttons */}
           <div className="flex gap-4 pt-4">
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 bg-gradient-to-r from-green-600 to-teal-600 text-white font-semibold py-2 rounded-lg shadow-md hover:shadow-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 bg-gradient-to-r from-green-600 to-teal-600 text-white font-semibold py-2 rounded-lg"
             >
-              {submitting ? (
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-              ) : (
-                "Update Project"
-              )}
+              Update Project
             </button>
             <button
               type="button"
               onClick={() => navigate("/projects")}
-              className="flex-1 bg-gray-200 text-gray-700 font-semibold py-2 rounded-lg hover:bg-gray-300 transition"
+              className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg"
             >
               Cancel
             </button>

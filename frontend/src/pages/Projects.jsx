@@ -46,14 +46,14 @@ export default function Projects() {
   };
 
   const getStatusBadge = (status) => {
-    const statusMap = {
+    const map = {
       draft: { label: "Draft", color: "bg-gray-500" },
       submitted: { label: "Submitted", color: "bg-yellow-500" },
       under_review: { label: "Under Review", color: "bg-blue-500" },
       approved: { label: "Approved", color: "bg-green-500" },
       revisions_needed: { label: "Revisions Needed", color: "bg-red-500" },
     };
-    const s = statusMap[status] || { label: status, color: "bg-gray-500" };
+    const s = map[status] || { label: status, color: "bg-gray-500" };
     return (
       <span className={`px-2 py-1 rounded-full text-xs text-white ${s.color}`}>
         {s.label}
@@ -75,7 +75,7 @@ export default function Projects() {
         <div className="flex gap-3 w-full md:w-auto">
           <input
             type="text"
-            placeholder="Search by title, description..."
+            placeholder="Search..."
             className="border border-gray-300 rounded-lg px-4 py-2 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -90,7 +90,6 @@ export default function Projects() {
           )}
         </div>
       </div>
-
       <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px]">
@@ -129,7 +128,7 @@ export default function Projects() {
                 projects.map((p) => (
                   <tr
                     key={p.id}
-                    className="border-b border-gray-100 hover:bg-gray-50 transition"
+                    className="border-b border-gray-100 hover:bg-gray-50"
                   >
                     <td className="p-3 font-medium text-gray-800">{p.title}</td>
                     <td className="p-3 text-gray-600">{p.subject_name}</td>
