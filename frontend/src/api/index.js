@@ -41,8 +41,14 @@ export const getFiles = () => api.get('/files.php');
 export const uploadFile = (formData) => api.post('/files.php', formData);
 export const getAnalytics = () => api.get('/analytics.php');
 export const getGanttData = () => api.get('/gantt.php');
-
-// Download helper – इसका उपयोग Files.jsx में करें
 export const downloadFile = (filename) => `/api/download.php?file=${encodeURIComponent(filename)}`;
+
+// ========== FILE ERRORS (NEW) ==========
+export const markFileError = (file_id, project_id, error_description) =>
+  api.post('/mark_file_error.php', { file_id, project_id, error_description });
+export const getFileErrors = (project_id) =>
+  api.get(`/get_file_errors.php?project_id=${project_id}`);
+export const resolveFileError = (error_id) =>
+  api.post('/resolve_file_error.php', { error_id });
 
 export default api;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import {
   getProject,
   updateProject,
@@ -8,6 +8,8 @@ import {
   downloadFile,
 } from "../api";
 import toast from "react-hot-toast";
+import FileErrorModal from "../components/FileErrorModal";
+import FileErrorList from "../components/FileErrorList";
 
 export default function MentorProjectReview() {
   const { id } = useParams();
@@ -17,10 +19,16 @@ export default function MentorProjectReview() {
   const [rating, setRating] = useState(0);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [currentFile, setCurrentFile] = useState(null);
+  const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    setUserRole(user.role || "mentor");
     load();
   }, [id]);
+
   const load = async () => {
     const p = await getProject(id);
     setProject(p.data);
@@ -29,19 +37,29 @@ export default function MentorProjectReview() {
     setRating(p.data.rating || 0);
     const c = await getComments(id);
     setComments(c.data);
+    if (p.data.file_path) {
+      setCurrentFile({
+        id: p.data.file_id,
+        file_name: p.data.file_path.split("/").pop(),
+      });
+    }
   };
+
   const update = async () => {
     await updateProject(id, { status, feedback, rating });
     toast.success("Review saved");
     load();
   };
+
   const postComment = async () => {
     if (!newComment) return;
     await addComment(id, newComment);
     setNewComment("");
     load();
   };
-  if (!project) return <div>Loading...</div>;
+
+  if (!project) return <div className="text-center p-10">Loading...</div>;
+
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
       <h2 className="text-2xl font-bold mb-4">📋 Review: {project.title}</h2>
@@ -64,15 +82,31 @@ export default function MentorProjectReview() {
         <br />
         {project.description}
       </p>
+
       {project.file_path && (
-        <a
-          href={downloadFile(project.file_path)}
-          target="_blank"
-          className="text-blue-600 inline-block mb-4"
-        >
-          📎 Download File
-        </a>
+        <div className="mb-4">
+          <div className="flex items-center gap-3">
+            <a
+              href={downloadFile(project.file_path)}
+              target="_blank"
+              className="text-blue-600"
+            >
+              📎 Download File
+            </a>
+            {userRole === "mentor" && (
+              <button
+                onClick={() => setShowErrorModal(true)}
+                className="text-red-600 text-sm bg-red-50 px-3 py-1 rounded-full hover:bg-red-100"
+              >
+                ⚠️ Mark Error
+              </button>
+            )}
+          </div>
+        </div>
       )}
+
+      <FileErrorList projectId={id} userRole={userRole} />
+
       <div className="mb-4">
         <label className="block font-bold">Rating</label>
         <div className="flex gap-2">
@@ -89,6 +123,7 @@ export default function MentorProjectReview() {
             ))}
         </div>
       </div>
+
       <div className="mb-4">
         <label className="block font-bold">Status</label>
         <select
@@ -110,12 +145,23 @@ export default function MentorProjectReview() {
           onChange={(e) => setFeedback(e.target.value)}
         />
       </div>
+
       <button
         onClick={update}
         className="bg-indigo-600 text-white px-4 py-2 rounded mb-6"
       >
         Save Review
       </button>
+
+      <div className="mb-6">
+        <Link
+          to={`/video-conference/${id}`}
+          className="inline-flex items-center gap-2 bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition"
+        >
+          📹 Start Video Conference
+        </Link>
+      </div>
+
       <hr className="my-4" />
       <h3 className="font-bold text-lg mb-3">💬 Discussion</h3>
       <div className="max-h-64 overflow-y-auto mb-3">
@@ -144,6 +190,18 @@ export default function MentorProjectReview() {
           Post
         </button>
       </div>
+
+      {showErrorModal && currentFile && (
+        <FileErrorModal
+          file={currentFile}
+          projectId={id}
+          onClose={() => setShowErrorModal(false)}
+          onSuccess={() => {
+            load();
+            setShowErrorModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

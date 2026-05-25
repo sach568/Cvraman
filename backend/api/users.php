@@ -27,7 +27,7 @@ if ($method === 'POST') {
     $roll = trim($input['roll_number'] ?? '');
     $branch = $input['branch'] ?? 'CSE';
 
-    // ✅ Validation
+    //  Validation
     if (empty($name))
       sendJSON(['error' => 'Name is required'], 400);
     if (!filter_var($email, FILTER_VALIDATE_EMAIL))
@@ -35,7 +35,7 @@ if ($method === 'POST') {
     if (empty($roll))
       sendJSON(['error' => 'Roll number is required'], 400);
 
-    // ✅ Duplicate check
+    // Duplicate check
     $check = $conn->prepare("SELECT id FROM users WHERE email = ? OR roll_number = ?");
     $check->bind_param("ss", $email, $roll);
     $check->execute();

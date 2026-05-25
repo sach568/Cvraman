@@ -6,22 +6,41 @@ $user_id = $_SESSION['user_id'];
 $role = $_SESSION['role'];
 $method = $_SERVER['REQUEST_METHOD'];
 
-// GET
+// ---------- GET ----------
 if ($method === 'GET') {
+  // Single project by ID
   if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $id = (int) $_GET['id'];
-    $stmt = $conn->prepare("SELECT p.*, s.name as subject_name, u.name as mentor_name, stu.name as student_name, stu.roll_number FROM projects p JOIN subjects s ON p.subject_id=s.id JOIN users u ON p.mentor_id=u.id JOIN users stu ON p.student_id=stu.id WHERE p.id=?");
+    $stmt = $conn->prepare("SELECT p.*, s.name as subject_name, u.name as mentor_name, stu.name as student_name, stu.roll_number 
+                                FROM projects p 
+                                JOIN subjects s ON p.subject_id = s.id 
+                                JOIN users u ON p.mentor_id = u.id 
+                                JOIN users stu ON p.student_id = stu.id 
+                                WHERE p.id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $res = $stmt->get_result();
-    if ($row = $res->fetch_assoc())
+    if ($row = $res->fetch_assoc()) {
+      // ✅ Get file_id from project_files
+      $fileQuery = $conn->prepare("SELECT id FROM project_files WHERE project_id = ? LIMIT 1");
+      $fileQuery->bind_param("i", $id);
+      $fileQuery->execute();
+      $fileResult = $fileQuery->get_result();
+      $row['file_id'] = $fileResult->fetch_assoc()['id'] ?? null;
       sendJSON($row);
-    else
+    } else {
       sendJSON(['error' => 'Not found'], 404);
+    }
   }
+
+  // List projects (unchanged but keep for completeness)
   $search = trim($_GET['search'] ?? '');
   if ($role === 'student') {
-    $sql = "SELECT p.*, s.name as subject_name, u.name as mentor_name FROM projects p JOIN subjects s ON p.subject_id=s.id JOIN users u ON p.mentor_id=u.id WHERE p.student_id = ?";
+    $sql = "SELECT p.*, s.name as subject_name, u.name as mentor_name 
+                FROM projects p 
+                JOIN subjects s ON p.subject_id = s.id 
+                JOIN users u ON p.mentor_id = u.id 
+                WHERE p.student_id = ?";
     if ($search)
       $sql .= " AND (p.title LIKE ? OR p.description LIKE ?)";
     $sql .= " ORDER BY p.id DESC";
@@ -29,10 +48,15 @@ if ($method === 'GET') {
     if ($search) {
       $like = "%$search%";
       $stmt->bind_param("iss", $user_id, $like, $like);
-    } else
+    } else {
       $stmt->bind_param("i", $user_id);
+    }
   } elseif ($role === 'mentor') {
-    $sql = "SELECT p.*, u.name as student_name, u.roll_number, s.name as subject_name FROM projects p JOIN users u ON p.student_id=u.id JOIN subjects s ON p.subject_id=s.id WHERE p.mentor_id = ?";
+    $sql = "SELECT p.*, u.name as student_name, u.roll_number, s.name as subject_name 
+                FROM projects p 
+                JOIN users u ON p.student_id = u.id 
+                JOIN subjects s ON p.subject_id = s.id 
+                WHERE p.mentor_id = ?";
     if ($search)
       $sql .= " AND (p.title LIKE ? OR u.name LIKE ?)";
     $sql .= " ORDER BY p.id DESC";
@@ -40,10 +64,16 @@ if ($method === 'GET') {
     if ($search) {
       $like = "%$search%";
       $stmt->bind_param("iss", $user_id, $like, $like);
-    } else
+    } else {
       $stmt->bind_param("i", $user_id);
+    }
   } else {
-    $stmt = $conn->prepare("SELECT p.*, stu.name as student_name, ment.name as mentor_name, s.name as subject_name FROM projects p JOIN users stu ON p.student_id=stu.id JOIN users ment ON p.mentor_id=ment.id JOIN subjects s ON p.subject_id=s.id ORDER BY p.id DESC");
+    $stmt = $conn->prepare("SELECT p.*, stu.name as student_name, ment.name as mentor_name, s.name as subject_name 
+                                FROM projects p 
+                                JOIN users stu ON p.student_id = stu.id 
+                                JOIN users ment ON p.mentor_id = ment.id 
+                                JOIN subjects s ON p.subject_id = s.id 
+                                ORDER BY p.id DESC");
     $stmt->execute();
     $res = $stmt->get_result();
     sendJSON($res->fetch_all(MYSQLI_ASSOC));
@@ -54,46 +84,64 @@ if ($method === 'GET') {
   sendJSON($res->fetch_all(MYSQLI_ASSOC));
 }
 
-// POST Create
+// ---------- POST Create ----------
 if ($method === 'POST') {
   if ($role !== 'student')
     sendJSON(['error' => 'Only students can create'], 403);
+
   $title = trim($_POST['title'] ?? '');
   $desc = trim($_POST['description'] ?? '');
   $branch = $_POST['branch'] ?? 'CSE';
   $subject_id = (int) $_POST['subject_id'];
   $mentor_id = (int) $_POST['mentor_id'];
   $deadline = $_POST['deadline'] ?? null;
-  $filePath = '';
+
   if (empty($title) || empty($desc) || !$subject_id || !$mentor_id)
     sendJSON(['error' => 'Missing required fields'], 400);
+
+  $filePath = '';
+  $originalFileName = '';
   if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
     $ext = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
     if (!in_array($ext, ['jpg', 'jpeg', 'pdf', 'png']))
       sendJSON(['error' => 'Invalid file type'], 400);
-    $fileName = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+    $originalFileName = $_FILES['file']['name'];
+    $savedName = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
     $uploadDir = __DIR__ . '/../uploads/';
     if (!is_dir($uploadDir))
       mkdir($uploadDir, 0777, true);
-    if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadDir . $fileName))
-      $filePath = $fileName;
+    if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadDir . $savedName))
+      $filePath = $savedName;
     else
       sendJSON(['error' => 'File upload failed'], 500);
   }
+
+  // Insert project
   $stmt = $conn->prepare("INSERT INTO projects (title, description, branch, student_id, mentor_id, subject_id, file_path, deadline) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
   $stmt->bind_param("sssiiiss", $title, $desc, $branch, $user_id, $mentor_id, $subject_id, $filePath, $deadline);
   if ($stmt->execute()) {
-    $id = $stmt->insert_id;
+    $projectId = $stmt->insert_id;
+
+    // ✅ If a file was uploaded, also insert into project_files
+    if ($filePath) {
+      $pfStmt = $conn->prepare("INSERT INTO project_files (project_id, user_id, file_name, file_path) VALUES (?, ?, ?, ?)");
+      $pfStmt->bind_param("iiss", $projectId, $user_id, $originalFileName, $filePath);
+      $pfStmt->execute();
+    }
+
+    // Activity log
     $act = $conn->prepare("INSERT INTO activity_logs (user_id, action, details) VALUES (?, 'created project', ?)");
-    $details = "Project ID: $id";
+    $details = "Project ID: $projectId";
     $act->bind_param("is", $user_id, $details);
     $act->execute();
-    sendJSON(['success' => true, 'id' => $id]);
-  } else
-    sendJSON(['error' => 'DB error'], 500);
+
+    sendJSON(['success' => true, 'id' => $projectId]);
+  } else {
+    sendJSON(['error' => 'DB error: ' . $conn->error], 500);
+  }
 }
 
-// PUT Update
+// ---------- PUT Update ----------
 if ($method === 'PUT') {
   $input = json_decode(file_get_contents('php://input'), true);
   if (!$input)
@@ -119,6 +167,7 @@ if ($method === 'PUT') {
     $stmt = $conn->prepare("UPDATE projects SET status=?, feedback=?, rating=? WHERE id=? AND mentor_id=?");
     $stmt->bind_param("ssiii", $status, $feedback, $rating, $id, $user_id);
     $stmt->execute();
+    // Notify student
     $studQ = $conn->prepare("SELECT student_id FROM projects WHERE id=?");
     $studQ->bind_param("i", $id);
     $studQ->execute();
@@ -130,11 +179,12 @@ if ($method === 'PUT') {
       $notif->execute();
     }
     sendJSON(['success' => true]);
-  } else
+  } else {
     sendJSON(['error' => 'Unauthorized'], 403);
+  }
 }
 
-// DELETE
+// ---------- DELETE ----------
 if ($method === 'DELETE') {
   if ($role !== 'student')
     sendJSON(['error' => 'Only students can delete'], 403);
@@ -149,12 +199,15 @@ if ($method === 'DELETE') {
     $del = $conn->prepare("DELETE FROM projects WHERE id=? AND student_id=?");
     $del->bind_param("ii", $id, $user_id);
     $del->execute();
+    // Also delete from project_files
+    $conn->prepare("DELETE FROM project_files WHERE project_id=?")->bind_param("i", $id)->execute();
     $act = $conn->prepare("INSERT INTO activity_logs (user_id, action, details) VALUES (?, 'deleted project', ?)");
     $details = "Project ID: $id";
     $act->bind_param("is", $user_id, $details);
     $act->execute();
     sendJSON(['success' => true]);
-  } else
+  } else {
     sendJSON(['error' => 'Not found'], 404);
+  }
 }
 ?>

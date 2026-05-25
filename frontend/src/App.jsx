@@ -20,6 +20,7 @@ import MentorProjectReview from "./pages/MentorProjectReview";
 import AdminSubjects from "./pages/AdminSubjects";
 import AdminUsers from "./pages/AdminUsers";
 import Notifications from "./pages/Notifications";
+import VideoConference from "./pages/VideoConference";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -63,6 +64,10 @@ function App() {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/admin/subjects" element={<AdminSubjects />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route
+            path="/video-conference/:projectId"
+            element={<VideoConference />}
+          />
         </Route>
       </Routes>
     </BrowserRouter>
