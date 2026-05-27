@@ -1,5 +1,7 @@
 {
     "require": {
-        "firebase/php-jwt": "^6.0"
+        "firebase/php-jwt": "^6.0",
+        "setasign/fpdf": "^1.8",
+        "setasign/fpdi": "^2.6"
     }
 }

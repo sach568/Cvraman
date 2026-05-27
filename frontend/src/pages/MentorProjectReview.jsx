@@ -10,6 +10,7 @@ import {
 import toast from "react-hot-toast";
 import FileErrorModal from "../components/FileErrorModal";
 import FileErrorList from "../components/FileErrorList";
+import BatchErrorModal from "../components/BatchErrorModal";
 
 export default function MentorProjectReview() {
   const { id } = useParams();
@@ -20,6 +21,7 @@ export default function MentorProjectReview() {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showBatchModal, setShowBatchModal] = useState(false);
   const [currentFile, setCurrentFile] = useState(null);
   const [userRole, setUserRole] = useState("");
 
@@ -85,21 +87,29 @@ export default function MentorProjectReview() {
 
       {project.file_path && (
         <div className="mb-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <a
-              href={downloadFile(project.file_path)}
+              href={`/api/download_marked_pdf.php?project_id=${id}`}
               target="_blank"
               className="text-blue-600"
             >
-              📎 Download File
+              📎 Download Marked PDF (with errors)
             </a>
             {userRole === "mentor" && (
-              <button
-                onClick={() => setShowErrorModal(true)}
-                className="text-red-600 text-sm bg-red-50 px-3 py-1 rounded-full hover:bg-red-100"
-              >
-                ⚠️ Mark Error
-              </button>
+              <>
+                <button
+                  onClick={() => setShowErrorModal(true)}
+                  className="text-red-600 text-sm bg-red-50 px-3 py-1 rounded-full"
+                >
+                  ⚠️ Mark Error (Single)
+                </button>
+                <button
+                  onClick={() => setShowBatchModal(true)}
+                  className="text-orange-600 text-sm bg-orange-50 px-3 py-1 rounded-full"
+                >
+                  📋 Batch Mark Errors
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -156,7 +166,7 @@ export default function MentorProjectReview() {
       <div className="mb-6">
         <Link
           to={`/video-conference/${id}`}
-          className="inline-flex items-center gap-2 bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition"
+          className="inline-flex items-center gap-2 bg-purple-600 text-white px-5 py-2 rounded-lg"
         >
           📹 Start Video Conference
         </Link>
@@ -199,6 +209,17 @@ export default function MentorProjectReview() {
           onSuccess={() => {
             load();
             setShowErrorModal(false);
+          }}
+        />
+      )}
+      {showBatchModal && currentFile && (
+        <BatchErrorModal
+          file={currentFile}
+          projectId={id}
+          onClose={() => setShowBatchModal(false)}
+          onSuccess={() => {
+            load();
+            setShowBatchModal(false);
           }}
         />
       )}

@@ -43,12 +43,17 @@ export const getAnalytics = () => api.get('/analytics.php');
 export const getGanttData = () => api.get('/gantt.php');
 export const downloadFile = (filename) => `/api/download.php?file=${encodeURIComponent(filename)}`;
 
-// ========== FILE ERRORS (NEW) ==========
-export const markFileError = (file_id, project_id, error_description) =>
-  api.post('/mark_file_error.php', { file_id, project_id, error_description });
+// ========== FILE ERRORS ==========
+export const markFileError = (file_id, project_id, error_description, line_number = null, original_text = null, suggested_text = null) =>
+  api.post('/mark_file_error.php', { file_id, project_id, error_description, line_number, original_text, suggested_text });
+
 export const getFileErrors = (project_id) =>
   api.get(`/get_file_errors.php?project_id=${project_id}`);
+
 export const resolveFileError = (error_id) =>
   api.post('/resolve_file_error.php', { error_id });
 
+// Batch error marking
+export const markFileErrorBatch = (file_id, project_id, errorsArray) =>
+  api.post('/mark_file_error.php', { file_id, project_id, batch: errorsArray });
 export default api;

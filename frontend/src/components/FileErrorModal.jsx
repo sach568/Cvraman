@@ -8,60 +8,75 @@ export default function FileErrorModal({
   onClose,
   onSuccess,
 }) {
-  const [errorText, setErrorText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [originalText, setOriginalText] = useState("");
+  const [suggestedText, setSuggestedText] = useState("");
+  const [lineNumber, setLineNumber] = useState("");
 
   const handleSubmit = async () => {
-    if (!errorText.trim()) return toast.error("Error description required");
+    if (!originalText.trim()) {
+      toast.error("Please enter the incorrect word");
+      return;
+    }
     setLoading(true);
     try {
-      await markFileError(file.id, projectId, errorText);
-      toast.success("Error marked and student notified");
+      const errorDesc = `🔴 Change "${originalText}" to "${suggestedText || "??"}"`;
+      await markFileError(
+        file.id,
+        projectId,
+        errorDesc,
+        lineNumber || null,
+        originalText,
+        suggestedText,
+      );
+      toast.success("Error marked");
       onSuccess();
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed");
+      toast.error("Failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fadeIn">
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-gray-800">
-            ⚠️ Mark Error in File
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md p-6">
+        <h3 className="text-xl font-bold mb-2">🔴 Mark Error (Goal Circle)</h3>
+        <p className="text-sm mb-3">File: {file.file_name}</p>
+        <div className="space-y-3">
+          <input
+            type="text"
+            placeholder="Incorrect word (e.g., sachin)"
+            className="w-full border rounded p-2"
+            value={originalText}
+            onChange={(e) => setOriginalText(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Corrected word (e.g., sacins)"
+            className="w-full border rounded p-2"
+            value={suggestedText}
+            onChange={(e) => setSuggestedText(e.target.value)}
+          />
+          <input
+            type="number"
+            placeholder="Page number (optional)"
+            className="w-full border rounded p-2"
+            value={lineNumber}
+            onChange={(e) => setLineNumber(e.target.value)}
+          />
         </div>
-        <p className="text-gray-600 text-sm mb-2">
-          File: <span className="font-mono">{file.file_name}</span>
-        </p>
-        <textarea
-          className="w-full border border-gray-300 rounded-lg p-3 h-32 focus:ring-2 focus:ring-red-400 focus:border-red-400"
-          placeholder="Describe the error clearly..."
-          value={errorText}
-          onChange={(e) => setErrorText(e.target.value)}
-        />
-        <div className="flex justify-end gap-3 mt-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
+        <div className="flex justify-end gap-2 mt-4">
+          <button onClick={onClose} className="px-4 py-2 border rounded">
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+            className="px-4 py-2 bg-red-600 text-white rounded"
           >
-            {loading ? "Marking..." : "Mark Error"}
+            Mark Error
           </button>
         </div>
       </div>

@@ -15,7 +15,6 @@ $error_id = (int) ($input['error_id'] ?? 0);
 if (!$error_id)
   sendJSON(['error' => 'Error ID required'], 400);
 
-// Verify error belongs to student's project
 $check = $conn->prepare("
     SELECT fe.id FROM file_errors fe 
     JOIN projects p ON p.id = fe.project_id 

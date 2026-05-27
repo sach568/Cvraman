@@ -7,6 +7,10 @@ namespace Composer\Autoload;
 class ComposerStaticInit0f2c3a727a6da4acd150a914dd810575
 {
     public static $prefixLengthsPsr4 = array (
+        's' =>
+        array (
+            'setasign\\Fpdi\\' => 14,
+        ),
         'F' =>
         array (
             'Firebase\\JWT\\' => 13,
@@ -14,6 +18,10 @@ class ComposerStaticInit0f2c3a727a6da4acd150a914dd810575
     );
 
     public static $prefixDirsPsr4 = array (
+        'setasign\\Fpdi\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/setasign/fpdi/src',
+        ),
         'Firebase\\JWT\\' =>
         array (
             0 => __DIR__ . '/..' . '/firebase/php-jwt/src',
@@ -22,6 +30,7 @@ class ComposerStaticInit0f2c3a727a6da4acd150a914dd810575
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'FPDF' => __DIR__ . '/..' . '/setasign/fpdf/fpdf.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
